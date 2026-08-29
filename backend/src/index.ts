@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { prisma } from "./lib/prisma";
 import { emailQueue } from "./queues/emailQueue";
+import slackRouter from "./routes/slack";
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use("/slack", slackRouter);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Backend is alive" });

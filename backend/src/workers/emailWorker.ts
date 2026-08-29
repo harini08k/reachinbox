@@ -8,6 +8,7 @@ import {
 } from "../lib/rateLimiter";
 import { emailQueue } from "../queues/emailQueue";
 import dotenv from "dotenv";
+import { notifySlackRateLimitHit } from "../lib/slackNotifier";
 
 dotenv.config();
 
@@ -38,6 +39,12 @@ const worker = new Worker<EmailJobData>(
         `Rate limit hit for sender ${email.sender.email} (${currentCount}/${email.sender.maxEmailsPerHour}). Rescheduling.`,
       );
 
+      await notifySlackRateLimitHit(
+        email.sender.slackAccessToken,
+        email.sender.email,
+        currentCount,
+        email.sender.maxEmailsPerHour,
+      );
       const delay = msUntilNextHour();
 
       // Re-add a new delayed job for the next hour window.

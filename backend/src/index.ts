@@ -34,7 +34,7 @@ app.get("/health", (req, res) => {
 });
 
 app.post("/test-email", async (req, res) => {
-  const { senderEmail } = req.body;
+  const { senderEmail, recipient, recipientName, subject, body } = req.body;
 
   const sender = await prisma.sender.findUnique({
     where: { email: senderEmail || "sender1@reachinbox.ai" },
@@ -44,13 +44,14 @@ app.post("/test-email", async (req, res) => {
     return res.status(400).json({ error: "Sender not found" });
   }
 
-  const scheduledTime = new Date(Date.now() + 10 * 1000); // 10s for faster testing now
+  const scheduledTime = new Date(Date.now() + 10 * 1000);
 
   const email = await prisma.email.create({
     data: {
-      recipient: "test@example.com",
-      subject: "Hello from BullMQ",
-      body: "This is a test scheduled email.",
+      recipient: recipient || "test@example.com",
+      recipientName: recipientName || null,
+      subject: subject || "Hello from BullMQ",
+      body: body || "This is a test scheduled email.",
       scheduledTime,
       senderId: sender.id,
     },
@@ -65,6 +66,7 @@ app.post("/test-email", async (req, res) => {
     scheduledTime: email.scheduledTime,
     senderEmail: sender.email,
   });
+
   const delay = scheduledTime.getTime() - Date.now();
 
   await emailQueue.add(

@@ -31,6 +31,7 @@ model Sender {
 model Email {
   id            String   @id @default(uuid())
   recipient     String
+  recipientName String?
   subject       String
   body          String
   scheduledTime DateTime

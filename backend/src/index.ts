@@ -7,6 +7,8 @@ import slackRouter from "./routes/slack";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
+import { indexEmail } from "./lib/emailIndexer";
+import { esClient } from "./lib/elasticsearch";
 
 dotenv.config();
 
@@ -54,6 +56,15 @@ app.post("/test-email", async (req, res) => {
     },
   });
 
+  await indexEmail({
+    id: email.id,
+    recipient: email.recipient,
+    subject: email.subject,
+    body: email.body,
+    status: email.status,
+    scheduledTime: email.scheduledTime,
+    senderEmail: sender.email,
+  });
   const delay = scheduledTime.getTime() - Date.now();
 
   await emailQueue.add(
@@ -71,6 +82,31 @@ app.post("/test-email", async (req, res) => {
 app.get("/test-emails", async (req, res) => {
   const emails = await prisma.email.findMany({ include: { sender: true } });
   res.json(emails);
+});
+
+app.get("/search-emails", async (req, res) => {
+  const { q } = req.query;
+
+  if (!q) {
+    return res.status(400).json({ error: "Query param 'q' is required" });
+  }
+
+  const result = await esClient.search({
+    index: "emails",
+    query: {
+      multi_match: {
+        query: q as string,
+        fields: ["subject", "body", "recipient"],
+      },
+    },
+  });
+
+  const hits = result.hits.hits.map((hit: any) => ({
+    id: hit._id,
+    ...hit._source,
+  }));
+
+  res.json(hits);
 });
 
 app.listen(PORT, () => {

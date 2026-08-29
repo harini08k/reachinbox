@@ -9,6 +9,7 @@ import {
 import { emailQueue } from "../queues/emailQueue";
 import dotenv from "dotenv";
 import { notifySlackRateLimitHit } from "../lib/slackNotifier";
+import { indexEmail } from "../lib/emailIndexer";
 
 dotenv.config();
 
@@ -82,12 +83,32 @@ const worker = new Worker<EmailJobData>(
         where: { id: email.id },
         data: { status: "sent" },
       });
+
+      await indexEmail({
+        id: email.id,
+        recipient: email.recipient,
+        subject: email.subject,
+        body: email.body,
+        status: "sent",
+        scheduledTime: email.scheduledTime,
+        senderEmail: email.sender.email,
+      });
     } catch (err) {
       console.error(`Failed to send email ${email.id}:`, err);
 
       await prisma.email.update({
         where: { id: email.id },
         data: { status: "failed" },
+      });
+
+      await indexEmail({
+        id: email.id,
+        recipient: email.recipient,
+        subject: email.subject,
+        body: email.body,
+        status: "failed",
+        scheduledTime: email.scheduledTime,
+        senderEmail: email.sender.email,
       });
 
       throw err;

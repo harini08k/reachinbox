@@ -4,10 +4,23 @@ import dotenv from "dotenv";
 import { prisma } from "./lib/prisma";
 import { emailQueue } from "./queues/emailQueue";
 import slackRouter from "./routes/slack";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
 
 dotenv.config();
 
 const app = express();
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath("/admin/queues");
+
+createBullBoard({
+  queues: [new BullMQAdapter(emailQueue)],
+  serverAdapter,
+});
+
+app.use("/admin/queues", serverAdapter.getRouter());
+
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());

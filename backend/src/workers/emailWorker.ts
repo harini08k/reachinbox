@@ -1,6 +1,10 @@
 import { Worker, Job } from "bullmq";
 import { connection } from "../lib/redis";
 import { prisma } from "../lib/prisma";
+import { transporter } from "../lib/mailer";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 interface EmailJobData {
   emailId: string;
@@ -11,7 +15,6 @@ const worker = new Worker<EmailJobData>(
   async (job: Job<EmailJobData>) => {
     console.log(`Processing job ${job.id} for email ${job.data.emailId}`);
 
-    // 1. Fetch the latest version of this email from Postgres
     const email = await prisma.email.findUnique({
       where: { id: job.data.emailId },
     });
@@ -21,22 +24,43 @@ const worker = new Worker<EmailJobData>(
       return;
     }
 
-    // 2. (For now) simulate "sending" the email
-    console.log(`Sending email to ${email.recipient}: "${email.subject}"`);
+    try {
+      const info = await transporter.sendMail({
+        from: '"ReachInbox Scheduler" <scheduler@reachinbox.ai>',
+        to: email.recipient,
+        subject: email.subject,
+        text: email.body,
+      });
 
-    // 3. Mark it as sent in the database
-    await prisma.email.update({
-      where: { id: email.id },
-      data: { status: "sent" },
-    });
+      console.log(`Email sent: ${info.messageId}`);
+      console.log(`Preview URL: ${nodemailerPreviewUrl(info)}`);
 
-    console.log(`Email ${email.id} marked as sent.`);
+      await prisma.email.update({
+        where: { id: email.id },
+        data: { status: "sent" },
+      });
+    } catch (err) {
+      console.error(`Failed to send email ${email.id}:`, err);
+
+      await prisma.email.update({
+        where: { id: email.id },
+        data: { status: "failed" },
+      });
+
+      throw err; // re-throw so BullMQ marks the job as failed too
+    }
   },
   {
     connection,
-    concurrency: 5,
+    concurrency: Number(process.env.WORKER_CONCURRENCY) || 5,
   },
 );
+
+// Small helper to safely extract Ethereal's preview URL
+function nodemailerPreviewUrl(info: any): string {
+  const nodemailer = require("nodemailer");
+  return nodemailer.getTestMessageUrl(info) || "N/A";
+}
 
 worker.on("completed", (job) => {
   console.log(`Job ${job.id} completed.`);

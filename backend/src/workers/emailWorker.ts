@@ -2,6 +2,11 @@ import { Worker, Job } from "bullmq";
 import { connection } from "../lib/redis";
 import { prisma } from "../lib/prisma";
 import { transporter } from "../lib/mailer";
+import {
+  incrementSenderHourlyCount,
+  msUntilNextHour,
+} from "../lib/rateLimiter";
+import { emailQueue } from "../queues/emailQueue";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -17,6 +22,7 @@ const worker = new Worker<EmailJobData>(
 
     const email = await prisma.email.findUnique({
       where: { id: job.data.emailId },
+      include: { sender: true },
     });
 
     if (!email) {
@@ -24,6 +30,32 @@ const worker = new Worker<EmailJobData>(
       return;
     }
 
+    // 1. Check rate limit BEFORE sending
+    const currentCount = await incrementSenderHourlyCount(email.senderId);
+
+    if (currentCount > email.sender.maxEmailsPerHour) {
+      console.log(
+        `Rate limit hit for sender ${email.sender.email} (${currentCount}/${email.sender.maxEmailsPerHour}). Rescheduling.`,
+      );
+
+      const delay = msUntilNextHour();
+
+      // Re-add a new delayed job for the next hour window.
+      // We use a new jobId (old one is already "used up" in BullMQ's history)
+      await emailQueue.add(
+        "send-email",
+        { emailId: email.id },
+        {
+          jobId: `${email.id}-retry-${Date.now()}`,
+          delay,
+        },
+      );
+
+      // Email stays "scheduled" — it wasn't sent, just deferred
+      return;
+    }
+
+    // 2. Under the limit — proceed to actually send
     try {
       const info = await transporter.sendMail({
         from: '"ReachInbox Scheduler" <scheduler@reachinbox.ai>',
@@ -33,7 +65,11 @@ const worker = new Worker<EmailJobData>(
       });
 
       console.log(`Email sent: ${info.messageId}`);
-      console.log(`Preview URL: ${nodemailerPreviewUrl(info)}`);
+
+      const nodemailer = require("nodemailer");
+      console.log(
+        `Preview URL: ${nodemailer.getTestMessageUrl(info) || "N/A"}`,
+      );
 
       await prisma.email.update({
         where: { id: email.id },
@@ -47,7 +83,7 @@ const worker = new Worker<EmailJobData>(
         data: { status: "failed" },
       });
 
-      throw err; // re-throw so BullMQ marks the job as failed too
+      throw err;
     }
   },
   {
@@ -55,12 +91,6 @@ const worker = new Worker<EmailJobData>(
     concurrency: Number(process.env.WORKER_CONCURRENCY) || 5,
   },
 );
-
-// Small helper to safely extract Ethereal's preview URL
-function nodemailerPreviewUrl(info: any): string {
-  const nodemailer = require("nodemailer");
-  return nodemailer.getTestMessageUrl(info) || "N/A";
-}
 
 worker.on("completed", (job) => {
   console.log(`Job ${job.id} completed.`);

@@ -15,7 +15,19 @@ datasource db {
 
 
 
- model Email {
+model Sender {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  maxEmailsPerHour   Int      @default(200)
+  createdAt          DateTime @default(now())
+
+  emails             Email[]
+
+  @@map("senders")
+}
+
+model Email {
   id            String   @id @default(uuid())
   recipient     String
   subject       String
@@ -24,6 +36,9 @@ datasource db {
   status        String   @default("scheduled")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  senderId      String
+  sender        Sender   @relation(fields: [senderId], references: [id])
 
   @@map("emails")
 }

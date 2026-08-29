@@ -17,22 +17,28 @@ app.get("/health", (req, res) => {
 });
 
 app.post("/test-email", async (req, res) => {
-  // 1. Schedule this email 1 minute from now, for easy testing
-  const scheduledTime = new Date(Date.now() + 60 * 1000);
+  const { senderEmail } = req.body;
 
-  // 2. Save the email record in Postgres first, status = "scheduled"
+  const sender = await prisma.sender.findUnique({
+    where: { email: senderEmail || "sender1@reachinbox.ai" },
+  });
+
+  if (!sender) {
+    return res.status(400).json({ error: "Sender not found" });
+  }
+
+  const scheduledTime = new Date(Date.now() + 10 * 1000); // 10s for faster testing now
+
   const email = await prisma.email.create({
     data: {
       recipient: "test@example.com",
       subject: "Hello from BullMQ",
       body: "This is a test scheduled email.",
       scheduledTime,
+      senderId: sender.id,
     },
   });
 
-  // 3. Add a delayed job to BullMQ, using the email's DB id as the job id
-  //    Using the DB id as the job id is what gives us idempotency later —
-  //    BullMQ won't create a duplicate job with the same id.
   const delay = scheduledTime.getTime() - Date.now();
 
   await emailQueue.add(
@@ -48,7 +54,7 @@ app.post("/test-email", async (req, res) => {
 });
 
 app.get("/test-emails", async (req, res) => {
-  const emails = await prisma.email.findMany();
+  const emails = await prisma.email.findMany({ include: { sender: true } });
   res.json(emails);
 });
 

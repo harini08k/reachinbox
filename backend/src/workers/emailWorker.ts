@@ -89,6 +89,10 @@ const worker = new Worker<EmailJobData>(
   {
     connection,
     concurrency: Number(process.env.WORKER_CONCURRENCY) || 5,
+    limiter: {
+      max: 1,
+      duration: Number(process.env.MIN_DELAY_MS) || 2000,
+    },
   },
 );
 

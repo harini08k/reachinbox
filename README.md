@@ -164,3 +164,8 @@ reachinbox-scheduler/
     ├── FEATURES.md
     └── TRADEOFFS.md
 ```
+
+
+---
+
+Built as a submission for the ReachInbox / Outbox Labs Software Development Intern assessment.

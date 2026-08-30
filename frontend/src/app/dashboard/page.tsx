@@ -7,6 +7,7 @@ import EmailRow from "@/components/EmailRow";
 import ComposeModal from "@/components/ComposeModal";
 import EmailDetail from "@/components/EmailDetail";
 import { useSession } from "next-auth/react";
+export const dynamic = "force-dynamic";
 
 interface Email {
   id: string;

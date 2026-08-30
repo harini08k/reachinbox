@@ -11,6 +11,10 @@ interface EmailDoc {
 }
 
 export async function indexEmail(email: EmailDoc) {
+  if (!process.env.ELASTICSEARCH_URL) {
+    return; // Elasticsearch not configured in this environment — skip indexing
+  }
+
   try {
     await esClient.index({
       index: EMAIL_INDEX,
@@ -26,6 +30,5 @@ export async function indexEmail(email: EmailDoc) {
     });
   } catch (err) {
     console.error(`Failed to index email ${email.id} in Elasticsearch:`, err);
-    // Don't throw — search indexing failing shouldn't break email scheduling/sending
   }
 }

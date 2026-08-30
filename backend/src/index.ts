@@ -180,6 +180,21 @@ app.get("/search-emails", async (req, res) => {
     return res.status(400).json({ error: "Query param 'q' is required" });
   }
 
+  if (!process.env.ELASTICSEARCH_URL) {
+    // Fallback: simple Postgres search when Elasticsearch isn't configured (e.g. hosted deployment)
+    const results = await prisma.email.findMany({
+      where: {
+        OR: [
+          { subject: { contains: q as string, mode: "insensitive" } },
+          { body: { contains: q as string, mode: "insensitive" } },
+          { recipient: { contains: q as string, mode: "insensitive" } },
+        ],
+      },
+      include: { sender: true },
+    });
+    return res.json(results);
+  }
+
   const result = await esClient.search({
     index: "emails",
     query: {

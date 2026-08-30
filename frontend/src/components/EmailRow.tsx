@@ -8,6 +8,7 @@ interface EmailRowProps {
   bodyPreview: string;
   statusLabel: string;
   statusVariant: "scheduled" | "sent" | "failed";
+  onClick: () => void;
 }
 
 export default function EmailRow({
@@ -16,6 +17,7 @@ export default function EmailRow({
   bodyPreview,
   statusLabel,
   statusVariant,
+  onClick,
 }: EmailRowProps) {
   const badgeStyles = {
     scheduled: "bg-orange-100 text-orange-600",
@@ -24,7 +26,10 @@ export default function EmailRow({
   }[statusVariant];
 
   return (
-    <div className="flex items-center gap-4 border-b border-surface-border px-6 py-4 hover:bg-surface-muted">
+    <div
+      onClick={onClick}
+      className="flex cursor-pointer items-center gap-4 border-b border-surface-border px-6 py-4 hover:bg-surface-muted"
+    >
       <div className="w-40 flex-shrink-0 truncate text-sm text-text-primary">
         To: {recipient}
       </div>

@@ -39,7 +39,24 @@ export default function ComposeModal({
   const [submitting, setSubmitting] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [selectedSender, setSelectedSender] = useState("harini@testemail.com");
 
+  const availableSenders = [
+    { email: "harini@testemail.com", name: "Harini Karthikeyan" },
+    { email: "tom@testemail.com", name: "Tom Holland" },
+  ];
+
+  function handleAttachmentUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    setAttachments((prev) => [...prev, ...Array.from(files)]);
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
   function addRecipientFromInput() {
     const value = recipientInput.trim();
     if (value && value.includes("@")) {
@@ -71,6 +88,18 @@ export default function ComposeModal({
     });
   }
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   function applyFormat(command: string) {
     document.execCommand(command, false);
     bodyRef.current?.focus();
@@ -84,11 +113,20 @@ export default function ComposeModal({
 
     setSubmitting(true);
     try {
+      const encodedAttachments = await Promise.all(
+        attachments.map(async (file) => ({
+          filename: file.name,
+          mimeType: file.type || "application/octet-stream",
+          contentBase64: await fileToBase64(file),
+        })),
+      );
+
       const res = await fetch("http://localhost:4000/schedule-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipients,
+          senderEmail: selectedSender,
           subject,
           body: bodyRef.current?.innerText || "",
           startTime: sendLaterTime || undefined,
@@ -96,6 +134,7 @@ export default function ComposeModal({
             ? Number(delayBetween) * 1000
             : undefined,
           hourlyLimit: hourlyLimit ? Number(hourlyLimit) : undefined,
+          attachments: encodedAttachments,
         }),
       });
 
@@ -114,7 +153,6 @@ export default function ComposeModal({
       setSubmitting(false);
     }
   }
-
   const quickTimes = [
     { label: "Tomorrow, 10:00 AM", hoursFromNow: 24 },
     { label: "Tomorrow, 11:00 AM", hoursFromNow: 25 },
@@ -138,7 +176,7 @@ export default function ComposeModal({
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => fileInputRef.current?.click()}>
+            <button onClick={() => attachmentInputRef.current?.click()}>
               <Paperclip size={18} className="text-text-secondary" />
             </button>
             <input
@@ -147,6 +185,13 @@ export default function ComposeModal({
               accept=".csv,.txt"
               className="hidden"
               onChange={handleCsvUpload}
+            />
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleAttachmentUpload}
             />
             <button onClick={() => setShowSendLater((s) => !s)}>
               <Clock size={18} className="text-brand-green" />
@@ -217,9 +262,17 @@ export default function ComposeModal({
         <div className="flex-1 overflow-y-auto px-8 py-5">
           <div className="mb-4 flex items-center gap-3 border-b border-surface-border pb-3">
             <label className="w-16 text-sm text-text-secondary">From</label>
-            <span className="rounded-xl bg-surface-muted px-3 py-1.5 text-sm text-text-primary">
-              sender1@reachinbox.ai
-            </span>
+            <select
+              value={selectedSender}
+              onChange={(e) => setSelectedSender(e.target.value)}
+              className="rounded-xl bg-surface-muted px-3 py-1.5 text-sm text-text-primary focus:outline-none"
+            >
+              {availableSenders.map((s) => (
+                <option key={s.email} value={s.email}>
+                  {s.email}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="mb-4 flex items-start gap-3 border-b border-surface-border pb-3">
@@ -295,6 +348,26 @@ export default function ComposeModal({
           </div>
 
           {/* Rich text editor */}
+          {attachments.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {attachments.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 rounded-xl border border-surface-border bg-surface-muted px-3 py-2 text-sm"
+                >
+                  <span className="truncate max-w-[160px] text-text-primary">
+                    {file.name}
+                  </span>
+                  <span className="text-text-secondary">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </span>
+                  <button onClick={() => removeAttachment(i)}>
+                    <X size={14} className="text-text-secondary" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="rounded-xl bg-surface-muted p-4">
             <div
               ref={bodyRef}

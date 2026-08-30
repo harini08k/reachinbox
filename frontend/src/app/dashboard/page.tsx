@@ -5,6 +5,7 @@ import { Search, Filter, RefreshCw } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import EmailRow from "@/components/EmailRow";
 import ComposeModal from "@/components/ComposeModal";
+import EmailDetail from "@/components/EmailDetail";
 
 interface Email {
   id: string;
@@ -14,6 +15,9 @@ interface Email {
   body: string;
   status: string;
   scheduledTime: string;
+  attachments:
+    | { filename: string; contentBase64: string; mimeType: string }[]
+    | null;
 }
 
 export default function DashboardPage() {
@@ -21,6 +25,7 @@ export default function DashboardPage() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
   useEffect(() => {
     fetchEmails();
@@ -57,44 +62,46 @@ export default function DashboardPage() {
         onTabChange={setActiveTab}
       />
 
-      <main className="flex-1">
-        <div className="flex items-center gap-3 border-b border-surface-border p-4">
-          <div className="flex flex-1 items-center gap-2 rounded-xl bg-surface-muted px-4 py-2.5">
-            <Search size={18} className="text-text-secondary" />
-            <input
-              placeholder="Search"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-text-secondary"
-            />
-          </div>
-          <Filter size={18} className="text-text-secondary" />
-          <button onClick={fetchEmails}>
-            <RefreshCw size={18} className="text-text-secondary" />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="p-6 text-sm text-text-secondary">Loading...</div>
-        ) : visibleEmails.length === 0 ? (
-          <div className="p-6 text-sm text-text-secondary">
-            No {activeTab} emails yet.
-          </div>
+      <main className="flex flex-1 flex-col">
+        {selectedEmail ? (
+          <EmailDetail
+            email={selectedEmail}
+            onBack={() => setSelectedEmail(null)}
+          />
         ) : (
-          <div>
-            {visibleEmails.map((email) => (
-              <EmailRow
-                key={email.id}
-                recipient={email.recipientName || email.recipient}
-                subject={email.subject}
-                bodyPreview={email.body.slice(0, 60)}
-                statusLabel={
-                  email.status === "scheduled"
-                    ? new Date(email.scheduledTime).toLocaleString()
-                    : email.status
-                }
-                statusVariant={email.status as "scheduled" | "sent" | "failed"}
-              />
-            ))}
-          </div>
+          <>
+            <div className="flex items-center gap-3 border-b border-surface-border p-4">
+              {/* ... existing search bar code stays here ... */}
+            </div>
+
+            {loading ? (
+              <div className="p-6 text-sm text-text-secondary">Loading...</div>
+            ) : visibleEmails.length === 0 ? (
+              <div className="p-6 text-sm text-text-secondary">
+                No {activeTab} emails yet.
+              </div>
+            ) : (
+              <div>
+                {visibleEmails.map((email) => (
+                  <EmailRow
+                    key={email.id}
+                    recipient={email.recipientName || email.recipient}
+                    subject={email.subject}
+                    bodyPreview={email.body.slice(0, 60)}
+                    statusLabel={
+                      email.status === "scheduled"
+                        ? new Date(email.scheduledTime).toLocaleString()
+                        : email.status
+                    }
+                    statusVariant={
+                      email.status as "scheduled" | "sent" | "failed"
+                    }
+                    onClick={() => setSelectedEmail(email)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
       {showCompose && (

@@ -26,7 +26,7 @@ app.use("/admin/queues", serverAdapter.getRouter());
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use("/slack", slackRouter);
 
 app.get("/health", (req, res) => {
@@ -37,7 +37,7 @@ app.post("/test-email", async (req, res) => {
   const { senderEmail, recipient, recipientName, subject, body } = req.body;
 
   const sender = await prisma.sender.findUnique({
-    where: { email: senderEmail || "sender1@reachinbox.ai" },
+    where: { email: senderEmail || "harini@testemail.com" },
   });
 
   if (!sender) {
@@ -84,12 +84,13 @@ app.post("/test-email", async (req, res) => {
 app.post("/schedule-batch", async (req, res) => {
   const {
     senderEmail,
-    recipients, // array of { email, name? }
+    recipients,
     subject,
     body,
-    startTime, // ISO string, optional
-    delayBetweenEmailsMs, // optional, defaults to MIN_DELAY_MS
-    hourlyLimit, // optional, updates sender's cap
+    startTime,
+    delayBetweenEmailsMs,
+    hourlyLimit,
+    attachments,
   } = req.body;
 
   if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -104,7 +105,6 @@ app.post("/schedule-batch", async (req, res) => {
     return res.status(400).json({ error: "Sender not found" });
   }
 
-  // If the user set a custom hourly limit for this campaign, update the sender's cap
   if (hourlyLimit) {
     sender = await prisma.sender.update({
       where: { id: sender.id },
@@ -132,6 +132,8 @@ app.post("/schedule-batch", async (req, res) => {
         body,
         scheduledTime,
         senderId: sender.id,
+        attachments:
+          attachments && attachments.length > 0 ? attachments : undefined,
       },
     });
 

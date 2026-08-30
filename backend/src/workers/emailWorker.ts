@@ -65,11 +65,22 @@ const worker = new Worker<EmailJobData>(
 
     // 2. Under the limit — proceed to actually send
     try {
+      const attachments = (email as any).attachments as
+        | { filename: string; contentBase64: string; mimeType: string }[]
+        | null;
+
       const info = await transporter.sendMail({
         from: '"ReachInbox Scheduler" <scheduler@reachinbox.ai>',
         to: email.recipient,
         subject: email.subject,
         text: email.body,
+        attachments: attachments
+          ? attachments.map((a) => ({
+              filename: a.filename,
+              content: Buffer.from(a.contentBase64, "base64"),
+              contentType: a.mimeType,
+            }))
+          : undefined,
       });
 
       console.log(`Email sent: ${info.messageId}`);

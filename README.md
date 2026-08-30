@@ -8,9 +8,9 @@ A production-grade email scheduler service + dashboard, built for the ReachInbox
 > Note: the hosted backend is on Render's free tier, which sleeps after ~15 minutes of inactivity. The first request after a period of idle time may take 30–60 seconds to respond while it wakes up. This does not happen on the local setup.
 
 📄 **More detail:**
-- [Architecture Overview]([https://github.com/harini08k/reachinbox/blob/main/ARCHITECTURE.md]) — how scheduling, persistence, rate limiting, and concurrency actually work under the hood
-- [Features Implemented](./docs/FEATURES.md) — full backend + frontend checklist
-- [Assumptions, Shortcuts & Trade-offs](./docs/TRADEOFFS.md) — honest notes on what was simplified and why
+- [Architecture Overview](./ARCHITECTURE.md) — how scheduling, persistence, rate limiting, and concurrency actually work under the hood
+- [Features Implemented](./FEATURES.md) — full backend + frontend checklist
+- [Assumptions, Shortcuts & Trade-offs](./TRADEOFFS.md) — honest notes on what was simplified and why
 
 ---
 
@@ -84,7 +84,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-This single command starts **both** the Express API and the BullMQ worker (they run in the same process — see [Architecture Overview]([./docs/ARCHITECTURE.md](https://github.com/harini08k/reachinbox/blob/main/ARCHITECTURE.md)) for why). You should see:
+This single command starts **both** the Express API and the BullMQ worker (they run in the same process — see [Architecture Overview]([./ARCHITECTURE.md](https://github.com/harini08k/reachinbox/blob/main/ARCHITECTURE.md)) for why). You should see:
 
 ```
 Email worker started, waiting for jobs...

@@ -121,22 +121,25 @@ export default function ComposeModal({
         })),
       );
 
-      const res = await fetch("http://localhost:4000/schedule-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipients,
-          senderEmail: selectedSender,
-          subject,
-          body: bodyRef.current?.innerText || "",
-          startTime: sendLaterTime || undefined,
-          delayBetweenEmailsMs: delayBetween
-            ? Number(delayBetween) * 1000
-            : undefined,
-          hourlyLimit: hourlyLimit ? Number(hourlyLimit) : undefined,
-          attachments: encodedAttachments,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/schedule-batch`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipients,
+            senderEmail: selectedSender,
+            subject,
+            body: bodyRef.current?.innerText || "",
+            startTime: sendLaterTime || undefined,
+            delayBetweenEmailsMs: delayBetween
+              ? Number(delayBetween) * 1000
+              : undefined,
+            hourlyLimit: hourlyLimit ? Number(hourlyLimit) : undefined,
+            attachments: encodedAttachments,
+          }),
+        },
+      );
 
       if (!res.ok) {
         const err = await res.json();

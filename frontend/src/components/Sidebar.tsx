@@ -53,7 +53,7 @@ export default function Sidebar({
       </div>
 
       <a
-        href="http://localhost:4000/slack/oauth/authorize?senderId=35c966a9-1771-4658-801f-bfa97dc6669e"
+        href={`${process.env.NEXT_PUBLIC_API_URL}/slack/oauth/authorize?senderId=35c966a9-1771-4658-801f-bfa97dc6669e`}
         className="mb-4 block rounded-xl border border-surface-border px-3 py-2 text-center text-sm text-text-secondary transition hover:bg-surface-muted"
       >
         Connect Slack

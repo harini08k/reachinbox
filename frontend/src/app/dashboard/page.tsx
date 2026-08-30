@@ -43,7 +43,7 @@ export default function DashboardPage() {
     }
     try {
       const res = await fetch(
-        `http://localhost:4000/search-emails?q=${encodeURIComponent(q)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/search-emails?q=${encodeURIComponent(q)}`,
       );
       const data = await res.json();
       setEmails(data);
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   async function fetchEmails() {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:4000/test-emails");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/test-emails`);
       const data = await res.json();
       setEmails(data);
     } catch (err) {

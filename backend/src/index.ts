@@ -9,6 +9,7 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { indexEmail } from "./lib/emailIndexer";
 import { esClient } from "./lib/elasticsearch";
+import "./workers/emailWorker";
 
 dotenv.config();
 

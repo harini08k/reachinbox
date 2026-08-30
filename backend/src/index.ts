@@ -81,6 +81,90 @@ app.post("/test-email", async (req, res) => {
   res.json({ message: "Email scheduled", email });
 });
 
+app.post("/schedule-batch", async (req, res) => {
+  const {
+    senderEmail,
+    recipients, // array of { email, name? }
+    subject,
+    body,
+    startTime, // ISO string, optional
+    delayBetweenEmailsMs, // optional, defaults to MIN_DELAY_MS
+    hourlyLimit, // optional, updates sender's cap
+  } = req.body;
+
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: "recipients array is required" });
+  }
+
+  let sender = await prisma.sender.findUnique({
+    where: { email: senderEmail || "sender1@reachinbox.ai" },
+  });
+
+  if (!sender) {
+    return res.status(400).json({ error: "Sender not found" });
+  }
+
+  // If the user set a custom hourly limit for this campaign, update the sender's cap
+  if (hourlyLimit) {
+    sender = await prisma.sender.update({
+      where: { id: sender.id },
+      data: { maxEmailsPerHour: Number(hourlyLimit) },
+    });
+  }
+
+  const baseTime = startTime
+    ? new Date(startTime)
+    : new Date(Date.now() + 10 * 1000);
+  const stagger =
+    Number(delayBetweenEmailsMs) || Number(process.env.MIN_DELAY_MS) || 2000;
+
+  const createdEmails = [];
+
+  for (let i = 0; i < recipients.length; i++) {
+    const r = recipients[i];
+    const scheduledTime = new Date(baseTime.getTime() + i * stagger);
+
+    const email = await prisma.email.create({
+      data: {
+        recipient: r.email,
+        recipientName: r.name || null,
+        subject,
+        body,
+        scheduledTime,
+        senderId: sender.id,
+      },
+    });
+
+    await indexEmail({
+      id: email.id,
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      status: email.status,
+      scheduledTime: email.scheduledTime,
+      senderEmail: sender.email,
+    });
+
+    const delay = scheduledTime.getTime() - Date.now();
+
+    await emailQueue.add(
+      "send-email",
+      { emailId: email.id },
+      {
+        jobId: email.id,
+        delay: Math.max(delay, 0),
+      },
+    );
+
+    createdEmails.push(email);
+  }
+
+  res.json({
+    message: `Scheduled ${createdEmails.length} emails`,
+    emails: createdEmails,
+  });
+});
+
 app.get("/test-emails", async (req, res) => {
   const emails = await prisma.email.findMany({ include: { sender: true } });
   res.json(emails);

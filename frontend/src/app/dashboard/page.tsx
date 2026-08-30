@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, Filter, RefreshCw } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import EmailRow from "@/components/EmailRow";
+import ComposeModal from "@/components/ComposeModal";
 
 interface Email {
   id: string;
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"scheduled" | "sent">("scheduled");
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCompose, setShowCompose] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -51,7 +53,7 @@ export default function DashboardPage() {
         activeTab={activeTab}
         scheduledCount={scheduledEmails.length}
         sentCount={sentEmails.length}
-        onComposeClick={() => alert("Compose modal coming next!")}
+        onComposeClick={() => setShowCompose(true)}
         onTabChange={setActiveTab}
       />
 
@@ -95,6 +97,12 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+      {showCompose && (
+        <ComposeModal
+          onClose={() => setShowCompose(false)}
+          onScheduled={fetchEmails}
+        />
+      )}
     </div>
   );
 }

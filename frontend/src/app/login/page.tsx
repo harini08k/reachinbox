@@ -1,3 +1,7 @@
+"use client";
+
+import { signIn } from "next-auth/react";
+
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface p-4">
@@ -6,7 +10,10 @@ export default function LoginPage() {
           Login
         </h1>
 
-        <button className="mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-brand-greenLight py-3 text-text-primary transition hover:opacity-90">
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          className="mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-brand-greenLight py-3 text-text-primary transition hover:opacity-90"
+        >
           <GoogleIcon />
           <span>Login with Google</span>
         </button>

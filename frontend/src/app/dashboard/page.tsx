@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import EmailRow from "@/components/EmailRow";
 import ComposeModal from "@/components/ComposeModal";
 import EmailDetail from "@/components/EmailDetail";
+import { useSession } from "next-auth/react";
 
 interface Email {
   id: string;
@@ -26,11 +27,29 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: session } = useSession();
   useEffect(() => {
     fetchEmails();
   }, []);
 
+  async function handleSearch(q: string) {
+    setSearchQuery(q);
+    if (!q) {
+      fetchEmails();
+      return;
+    }
+    try {
+      const res = await fetch(
+        `http://localhost:4000/search-emails?q=${encodeURIComponent(q)}`,
+      );
+      const data = await res.json();
+      setEmails(data);
+    } catch (err) {
+      console.error("Search failed:", err);
+    }
+  }
   async function fetchEmails() {
     setLoading(true);
     try {
@@ -60,6 +79,9 @@ export default function DashboardPage() {
         sentCount={sentEmails.length}
         onComposeClick={() => setShowCompose(true)}
         onTabChange={setActiveTab}
+        userName={session?.user?.name || "Guest"}
+        userEmail={session?.user?.email || ""}
+        userAvatar={session?.user?.image || ""}
       />
 
       <main className="flex flex-1 flex-col">
@@ -71,7 +93,14 @@ export default function DashboardPage() {
         ) : (
           <>
             <div className="flex items-center gap-3 border-b border-surface-border p-4">
-              {/* ... existing search bar code stays here ... */}
+              {
+                <input
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-text-secondary"
+                />
+              }
             </div>
 
             {loading ? (

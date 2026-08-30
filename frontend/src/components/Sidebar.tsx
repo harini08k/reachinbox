@@ -3,19 +3,15 @@
 import { Clock, Send } from "lucide-react";
 import Image from "next/image";
 
-// Placeholder until real Google OAuth session is wired in
-const currentUser = {
-  name: "Harini Karthikeyan",
-  email: "harini@testemail.com",
-  avatarUrl: "https://api.dicebear.com/7.x/notionists/svg?seed=doodle-pet",
-};
-
 interface SidebarProps {
   activeTab: "scheduled" | "sent";
   scheduledCount: number;
   sentCount: number;
   onComposeClick: () => void;
   onTabChange: (tab: "scheduled" | "sent") => void;
+  userName: string;
+  userEmail: string;
+  userAvatar: string;
 }
 
 export default function Sidebar({
@@ -24,6 +20,9 @@ export default function Sidebar({
   sentCount,
   onComposeClick,
   onTabChange,
+  userName,
+  userEmail,
+  userAvatar,
 }: SidebarProps) {
   return (
     <aside className="flex h-screen w-72 flex-col border-r border-surface-border bg-white p-4">
@@ -33,8 +32,11 @@ export default function Sidebar({
 
       <div className="mb-4 flex items-center gap-3 rounded-xl bg-surface-muted p-3">
         <Image
-          src={currentUser.avatarUrl}
-          alt={currentUser.name}
+          src={
+            userAvatar ||
+            "https://api.dicebear.com/7.x/notionists/svg?seed=doodle-pet"
+          }
+          alt={userName}
           width={36}
           height={36}
           className="h-9 w-9 flex-shrink-0 rounded-full bg-brand-greenLight"
@@ -42,13 +44,20 @@ export default function Sidebar({
         />
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-text-primary">
-            {currentUser.name}
+            {userName}
           </div>
           <div className="truncate text-xs text-text-secondary">
-            {currentUser.email}
+            {userEmail}
           </div>
         </div>
       </div>
+
+      <a
+        href="http://localhost:4000/slack/oauth/authorize?senderId=35c966a9-1771-4658-801f-bfa97dc6669e"
+        className="mb-4 block rounded-xl border border-surface-border px-3 py-2 text-center text-sm text-text-secondary transition hover:bg-surface-muted"
+      >
+        Connect Slack
+      </a>
 
       <button
         onClick={onComposeClick}
